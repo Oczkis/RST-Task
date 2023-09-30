@@ -448,8 +448,10 @@ namespace Unity.BossRoom.Gameplay.Actions
         /// <param name="logic">The ActionLogic to cancel</param>
         /// <param name="cancelAll">If true will cancel all instances; if false will just cancel the first running instance.</param>
         /// <param name="exceptThis">If set, will skip this action (useful for actions canceling other instances of themselves).</param>
-        public void CancelRunningActionsByLogic(ActionLogic logic, bool cancelAll, Action exceptThis = null)
+        public bool CancelRunningActionsByLogic(ActionLogic logic, bool cancelAll, Action exceptThis = null)
         {
+            bool successfullyCanceled = false;
+
             for (int i = m_NonBlockingActions.Count - 1; i >= 0; --i)
             {
                 var action = m_NonBlockingActions[i];
@@ -458,7 +460,10 @@ namespace Unity.BossRoom.Gameplay.Actions
                     action.Cancel(m_ServerCharacter);
                     m_NonBlockingActions.RemoveAt(i);
                     TryReturnAction(action);
-                    if (!cancelAll) { return; }
+
+                    successfullyCanceled = true;
+
+                    if (!cancelAll) { return successfullyCanceled; }
                 }
             }
 
@@ -468,10 +473,13 @@ namespace Unity.BossRoom.Gameplay.Actions
                 if (action.Config.Logic == logic && action != exceptThis)
                 {
                     action.Cancel(m_ServerCharacter);
+                    successfullyCanceled = true;
                     m_Queue.RemoveAt(0);
                     TryReturnAction(action);
                 }
             }
+
+            return successfullyCanceled;
         }
     }
 }

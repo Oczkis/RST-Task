@@ -57,6 +57,8 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
 
         public NetworkHealthState NetHealthState { get; private set; }
 
+        public NetworkManaState NetManaState { get; private set; }
+
         /// <summary>
         /// The active target of this character.
         /// </summary>
@@ -69,6 +71,12 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
         {
             get => NetHealthState.HitPoints.Value;
             private set => NetHealthState.HitPoints.Value = value;
+        }
+
+        public int ManaPoints
+        {
+            get => NetManaState.ManaPoints.Value;
+            private set => NetManaState.ManaPoints.Value = value;
         }
 
         public NetworkLifeState NetLifeState { get; private set; }
@@ -119,6 +127,8 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
         [Tooltip("If set, the ServerCharacter will automatically play the StartingAction when it is created. ")]
         private Action m_StartingAction;
 
+        [SerializeField]
+        ManaReceiver m_ManaReceiver;
 
         [SerializeField]
         DamageReceiver m_DamageReceiver;
@@ -146,6 +156,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             m_ServerActionPlayer = new ServerActionPlayer(this);
             NetLifeState = GetComponent<NetworkLifeState>();
             NetHealthState = GetComponent<NetworkHealthState>();
+            NetManaState = GetComponent<NetworkManaState>();
             m_State = GetComponent<NetworkAvatarGuidState>();
         }
 
@@ -156,6 +167,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             {
                 NetLifeState.LifeState.OnValueChanged += OnLifeStateChanged;
                 m_DamageReceiver.DamageReceived += ReceiveHP;
+                m_ManaReceiver.ManaReceived += ReceiveMana;
                 m_DamageReceiver.CollisionEntered += CollisionEntered;
 
                 if (IsNpc)
@@ -169,6 +181,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
                     PlayAction(ref startingAction);
                 }
                 InitializeHitPoints();
+                InitializeManaPoints();
             }
         }
 
@@ -179,6 +192,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             if (m_DamageReceiver)
             {
                 m_DamageReceiver.DamageReceived -= ReceiveHP;
+                m_ManaReceiver.ManaReceived -= ReceiveMana;
                 m_DamageReceiver.CollisionEntered -= CollisionEntered;
             }
         }
@@ -251,6 +265,20 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
                     {
                         LifeState = LifeState.Fainted;
                     }
+                }
+            }
+        }
+
+        void InitializeManaPoints()
+        {
+            ManaPoints = 0;
+
+            if (!IsNpc)
+            {
+                SessionPlayerData? sessionPlayerData = SessionManager<SessionPlayerData>.Instance.GetPlayerData(OwnerClientId);
+                if (sessionPlayerData is { HasCharacterSpawned: true })
+                {
+                    ManaPoints = sessionPlayerData.Value.CurrentManaPoints;
                 }
             }
         }
@@ -350,6 +378,11 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
 
                 m_ServerActionPlayer.ClearActions(false);
             }
+        }
+
+        void ReceiveMana(ServerCharacter sender, int MP)
+        {
+            ManaPoints = Mathf.Clamp(ManaPoints + MP, 0, CharacterClass.BaseMana.Value);
         }
 
         /// <summary>

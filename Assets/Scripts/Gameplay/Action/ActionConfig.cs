@@ -19,6 +19,9 @@ namespace Unity.BossRoom.Gameplay.Actions
         [Tooltip("How far the Action performer can be from the Target")]
         public float Range;
 
+        [Tooltip("Every how many seconds should the Action tick")]
+        public float TickIntervalSeconds;
+
         [Tooltip("Duration in seconds that this Action takes to play")]
         public float DurationSeconds;
 
